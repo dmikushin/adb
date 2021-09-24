@@ -100,20 +100,6 @@ elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
 else()
 endif()
 
-#message(STATUS ${SOURCES_BASE})
-if (WIN32)
-    link_directories(${CMAKE_SOURCE_DIR}/lib/windows/prebuilt/usb/)
-    link_directories(${CMAKE_SOURCE_DIR}/prebuilt/windows/32/)
-elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
-    link_directories(${CMAKE_SOURCE_DIR}/prebuilt/osx)
-elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
-  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
-    link_directories(${CMAKE_SOURCE_DIR}/prebuilt/linux/aarch64)
-  else()
-    link_directories(${CMAKE_SOURCE_DIR}/prebuilt/linux/x86-64)
-  endif()
-endif()
-
 add_executable(${PROJECT_NAME} ${SOURCES_BASE})
 
 target_include_directories(${PROJECT_NAME}
