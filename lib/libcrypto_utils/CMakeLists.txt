@@ -8,3 +8,5 @@ include_directories(${CMAKE_SOURCE_DIR}/lib/libcrypto_utils/include)
 include_directories(${CMAKE_SOURCE_DIR}/lib/boringssl/src/include)
 
 add_library(${PROJECT_NAME} STATIC android_pubkey.c)
+target_link_libraries(${PROJECT_NAME} PRIVATE ssl crypto)
+

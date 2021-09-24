@@ -34,7 +34,7 @@
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 #include <crypto_utils/android_pubkey.h>
-#include <openssl/base64.h>
+//#include <openssl/base64.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/pem.h>
@@ -71,6 +71,24 @@ static std::string get_user_info() {
     if (username.empty()) hostname = "unknown";
 
     return " " + username + "@" + hostname;
+}
+
+static int EVP_EncodedLength(size_t *out_len, size_t len) {
+  if (len + 2 < len) {
+    return 0;
+  }
+  len += 2;
+  len /= 3;
+  if (((len << 2) >> 2) != len) {
+    return 0;
+  }
+  len <<= 2;
+  if (len + 1 < len) {
+    return 0;
+  }
+  len++;
+  *out_len = len;
+  return 1;
 }
 
 static bool write_public_keyfile(RSA* private_key, const std::string& private_key_path) {

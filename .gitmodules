@@ -1,0 +1,3 @@
+[submodule "ThirdParty/openssl"]
+	path = ThirdParty/openssl
+	url = https://github.com/janbar/openssl-cmake
