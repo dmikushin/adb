@@ -22,6 +22,13 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#else
+#include <strings.h>
+#endif
+
 namespace android {
 namespace base {
 
