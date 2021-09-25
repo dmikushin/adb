@@ -21,7 +21,6 @@
 #include <filesystem>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include <memory>
 #include <mutex>
