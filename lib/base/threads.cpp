@@ -17,7 +17,6 @@
 #include <android-base/threads.h>
 
 #include <stdint.h>
-#include <unistd.h>
 
 #if defined(__APPLE__)
 #include <pthread.h>
@@ -25,6 +24,9 @@
 #include <syscall.h>
 #elif defined(_WIN32)
 #include <windows.h>
+#endif
+#ifndef _WIN32
+#include <unistd.h>
 #endif
 
 namespace android {
