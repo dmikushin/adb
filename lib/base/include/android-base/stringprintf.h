@@ -19,6 +19,19 @@
 #include <stdarg.h>
 #include <string>
 
+// https://stackoverflow.com/a/6849629/4063520
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+
 namespace android {
 namespace base {
 
@@ -26,15 +39,25 @@ namespace base {
 // use the same attribute for compile-time format string checking.
 
 // Returns a string corresponding to printf-like formatting of the arguments.
-std::string StringPrintf(const char* fmt, ...) __attribute__((__format__(__printf__, 1, 2)));
+std::string StringPrintf(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+    __attribute__((__format__(__printf__, 1, 2)))
+#endif
+    ;
 
 // Appends a printf-like formatting of the arguments to 'dst'.
-void StringAppendF(std::string* dst, const char* fmt, ...)
-    __attribute__((__format__(__printf__, 2, 3)));
+void StringAppendF(std::string* dst, FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+    __attribute__((__format__(__printf__, 2, 3)))
+#endif
+    ;
 
 // Appends a printf-like formatting of the arguments to 'dst'.
-void StringAppendV(std::string* dst, const char* format, va_list ap)
-    __attribute__((__format__(__printf__, 2, 0)));
+void StringAppendV(std::string* dst, FORMAT_STRING(const char* format), va_list ap)
+#ifndef _WIN32
+    __attribute__((__format__(__printf__, 2, 0)))
+#endif
+    ;
 
 }  // namespace base
 }  // namespace android
