@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "android-base/logging.h"
-#include "android-base/macros.h"  // For TEMP_FAILURE_RETRY on Darwin.
+#include "android-base/macros.h"  // For TEMP_FAILURE_RETRY
 #include "android-base/unique_fd.h"
 #include "android-base/utf8.h"
 
@@ -60,7 +60,7 @@ bool ReadFdToString(int fd, std::string* content) {
 
   char buf[BUFSIZ];
   ssize_t n;
-  while ((n = TEMP_FAILURE_RETRY(read(fd, &buf[0], sizeof(buf)))) > 0) {
+  while ((n = TEMP_FAILURE_RETRY([&]{ return read(fd, &buf[0], sizeof(buf)); })) > 0) {
     content->append(buf, n);
   }
   return (n == 0) ? true : false;
@@ -70,7 +70,7 @@ bool ReadFileToString(const std::string& path, std::string* content, bool follow
   content->clear();
 
   int flags = O_RDONLY | O_CLOEXEC | O_BINARY | (follow_symlinks ? 0 : O_NOFOLLOW);
-  android::base::unique_fd fd(TEMP_FAILURE_RETRY(open(path.c_str(), flags)));
+  android::base::unique_fd fd(TEMP_FAILURE_RETRY([&] { return open(path.c_str(), flags); }));
   if (fd == -1) {
     return false;
   }
@@ -81,7 +81,7 @@ bool WriteStringToFd(const std::string& content, int fd) {
   const char* p = content.data();
   size_t left = content.size();
   while (left > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY(write(fd, p, left));
+    ssize_t n = TEMP_FAILURE_RETRY([&] { return write(fd, p, left); });
     if (n == -1) {
       return false;
     }
@@ -105,7 +105,7 @@ bool WriteStringToFile(const std::string& content, const std::string& path,
                        bool follow_symlinks) {
   int flags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_BINARY |
               (follow_symlinks ? 0 : O_NOFOLLOW);
-  android::base::unique_fd fd(TEMP_FAILURE_RETRY(open(path.c_str(), flags, mode)));
+  android::base::unique_fd fd(TEMP_FAILURE_RETRY([&] { return open(path.c_str(), flags, mode); }));
   if (fd == -1) {
     PLOG(ERROR) << "android::WriteStringToFile open failed";
     return false;
@@ -133,7 +133,7 @@ bool WriteStringToFile(const std::string& content, const std::string& path,
                        bool follow_symlinks) {
   int flags = O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC | O_BINARY |
               (follow_symlinks ? 0 : O_NOFOLLOW);
-  android::base::unique_fd fd(TEMP_FAILURE_RETRY(open(path.c_str(), flags, 0666)));
+  android::base::unique_fd fd(TEMP_FAILURE_RETRY([&] { return open(path.c_str(), flags, 0666); }));
   if (fd == -1) {
     return false;
   }
@@ -144,7 +144,7 @@ bool ReadFully(int fd, void* data, size_t byte_count) {
   uint8_t* p = reinterpret_cast<uint8_t*>(data);
   size_t remaining = byte_count;
   while (remaining > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY(read(fd, p, remaining));
+    ssize_t n = TEMP_FAILURE_RETRY([&] { return read(fd, p, remaining); });
     if (n <= 0) return false;
     p += n;
     remaining -= n;
@@ -156,7 +156,7 @@ bool WriteFully(int fd, const void* data, size_t byte_count) {
   const uint8_t* p = reinterpret_cast<const uint8_t*>(data);
   size_t remaining = byte_count;
   while (remaining > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY(write(fd, p, remaining));
+    ssize_t n = TEMP_FAILURE_RETRY([&] { return write(fd, p, remaining); });
     if (n == -1) return false;
     p += n;
     remaining -= n;

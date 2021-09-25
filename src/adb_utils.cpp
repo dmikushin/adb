@@ -60,7 +60,7 @@ void close_stdin() {
         fatal_errno("failed to open %s", kNullFileName);
     }
 
-    if (TEMP_FAILURE_RETRY(dup2(fd, STDIN_FILENO)) == -1) {
+    if (TEMP_FAILURE_RETRY([&] { return dup2(fd, STDIN_FILENO); }) == -1) {
         fatal_errno("failed to redirect stdin to %s", kNullFileName);
     }
     unix_close(fd);

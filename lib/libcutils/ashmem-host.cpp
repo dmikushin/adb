@@ -47,7 +47,7 @@ int ashmem_create_region(const char *ignored __unused, size_t size)
 
     unlink(template);
 
-    if (TEMP_FAILURE_RETRY(ftruncate(fd, size)) == -1) {
+    if (TEMP_FAILURE_RETRY([&] { return ftruncate(fd, size); }) == -1) {
       close(fd);
       return -1;
     }

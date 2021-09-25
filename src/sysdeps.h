@@ -114,7 +114,7 @@ extern int  unix_read_interruptible(int  fd, void*  buf, size_t  len);
 
 // See the comments for the !defined(_WIN32) version of unix_read().
 static __inline__ int unix_read(int fd, void* buf, size_t len) {
-    return TEMP_FAILURE_RETRY(unix_read_interruptible(fd, buf, len));
+    return TEMP_FAILURE_RETRY([&] { return unix_read_interruptible(fd, buf, len); });
 }
 
 #undef   read
@@ -365,7 +365,7 @@ static __inline__ int  unix_open(const char*  path, int options,...)
 {
     if ((options & O_CREAT) == 0)
     {
-        return  TEMP_FAILURE_RETRY( open(path, options) );
+        return  TEMP_FAILURE_RETRY([&] { return open(path, options); });
     }
     else
     {
@@ -374,7 +374,7 @@ static __inline__ int  unix_open(const char*  path, int options,...)
         va_start( args, options );
         mode = va_arg( args, int );
         va_end( args );
-        return TEMP_FAILURE_RETRY( open( path, options, mode ) );
+        return TEMP_FAILURE_RETRY([&] { return open( path, options, mode ); });
     }
 }
 
@@ -382,7 +382,7 @@ static __inline__ int  unix_open(const char*  path, int options,...)
 // creation. See adb_open() for more info.
 static __inline__ int  adb_open_mode( const char*  pathname, int  options, int  mode )
 {
-    return TEMP_FAILURE_RETRY( open( pathname, options, mode ) );
+    return TEMP_FAILURE_RETRY([&] { return open( pathname, options, mode ); });
 }
 
 
@@ -395,7 +395,7 @@ static __inline__ int  adb_open_mode( const char*  pathname, int  options, int  
 // adb_read(), adb_write(), adb_close(), etc.
 static __inline__ int  adb_open( const char*  pathname, int  options )
 {
-    int  fd = TEMP_FAILURE_RETRY( open( pathname, options ) );
+    int  fd = TEMP_FAILURE_RETRY([&] { return open( pathname, options ); });
     if (fd < 0)
         return -1;
     close_on_exec( fd );
@@ -429,7 +429,7 @@ __inline__ int  adb_register_socket(int s) {
 
 static __inline__  int  adb_read(int  fd, void*  buf, size_t  len)
 {
-    return TEMP_FAILURE_RETRY( read( fd, buf, len ) );
+    return TEMP_FAILURE_RETRY([&] { return read( fd, buf, len ); });
 }
 
 // Like unix_read(), but does not handle EINTR.
@@ -442,7 +442,7 @@ static __inline__ int unix_read_interruptible(int fd, void* buf, size_t len) {
 
 static __inline__  int  adb_write(int  fd, const void*  buf, size_t  len)
 {
-    return TEMP_FAILURE_RETRY( write( fd, buf, len ) );
+    return TEMP_FAILURE_RETRY([&] { return write( fd, buf, len ); });
 }
 #undef   write
 #define  write  ___xxx_write
@@ -463,7 +463,7 @@ static __inline__  int    adb_unlink(const char*  path)
 
 static __inline__  int  adb_creat(const char*  path, int  mode)
 {
-    int  fd = TEMP_FAILURE_RETRY( creat( path, mode ) );
+    int  fd = TEMP_FAILURE_RETRY([&] { return creat( path, mode ); });
 
     if ( fd < 0 )
         return -1;
@@ -505,7 +505,7 @@ static __inline__ int  adb_socket_accept(int  serverfd, struct sockaddr*  addr, 
 {
     int fd;
 
-    fd = TEMP_FAILURE_RETRY( accept( serverfd, addr, addrlen ) );
+    fd = TEMP_FAILURE_RETRY([&] { return accept( serverfd, addr, addrlen ); });
     if (fd >= 0)
         close_on_exec(fd);
 
@@ -576,7 +576,7 @@ static __inline__ int  adb_socketpair( int  sv[2] )
 
 typedef struct pollfd adb_pollfd;
 static __inline__ int adb_poll(adb_pollfd* fds, size_t nfds, int timeout) {
-    return TEMP_FAILURE_RETRY(poll(fds, nfds, timeout));
+    return TEMP_FAILURE_RETRY([&] { return poll(fds, nfds, timeout); });
 }
 
 #define poll ___xxx_poll

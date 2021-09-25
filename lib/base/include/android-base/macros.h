@@ -18,21 +18,17 @@
 #define ANDROID_BASE_MACROS_H
 
 #include <stddef.h>  // for size_t
-#ifndef _WIN32
-#include <unistd.h>  // for TEMP_FAILURE_RETRY
-#endif
+#include <unistd.h>
+#include <errno.h>
 
-// bionic and glibc both have TEMP_FAILURE_RETRY, but eg Mac OS' libc doesn't.
-#ifndef TEMP_FAILURE_RETRY
-#define TEMP_FAILURE_RETRY(exp)            \
-  do {                                     \
-    decltype(exp) _rc;                     \
-    do {                                   \
-      _rc = (exp);                         \
-    } while (_rc == -1 && errno == EINTR); \
-    _rc;                                   \
-  } while(0)
-#endif
+template<typename T>
+auto TEMP_FAILURE_RETRY(T&& exp) -> decltype(exp()) {
+  decltype(exp()) _rc;
+  do {
+    _rc = exp();
+  } while (_rc == -1 && errno == EINTR);
+  return _rc;
+}
 
 // A macro to disallow the copy constructor and operator= functions
 // This must be placed in the private: declarations for a class.

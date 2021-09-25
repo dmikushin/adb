@@ -166,7 +166,7 @@ struct NonblockingFdConnection : public Connection {
 
     void WakeThread() {
         uint64_t buf = 0;
-        if (TEMP_FAILURE_RETRY(adb_write(wake_fd_write_.get(), &buf, sizeof(buf))) != sizeof(buf)) {
+        if (TEMP_FAILURE_RETRY([&] { return adb_write(wake_fd_write_.get(), &buf, sizeof(buf)); }) != sizeof(buf)) {
             LOG(FATAL) << "failed to wake up thread";
         }
     }
