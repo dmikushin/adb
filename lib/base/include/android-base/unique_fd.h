@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 // DO NOT INCLUDE OTHER LIBBASE HEADERS!
 // This file gets used in libbinder, and libbinder is used everywhere.
