@@ -19,9 +19,9 @@
 #endif
 
 #include "android-base/logging.h"
+#include "android-base/file.h"
 
 #include <fcntl.h>
-#include <libgen.h>
 #include <time.h>
 
 // For getprogname(3) or program_invocation_short_name.
@@ -40,6 +40,7 @@
 #include <mutex>
 #include <sstream>
 #include <string.h>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -49,7 +50,6 @@
 #include <android/set_abort_message.h>
 #else
 #include <sys/types.h>
-#include <unistd.h>
 #endif
 
 #include <android-base/macros.h>
@@ -60,33 +60,12 @@
 #include "AvailabilityMacros.h"  // For MAC_OS_X_VERSION_MAX_ALLOWED
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/syscall.h>
 #include <sys/time.h>
-#include <unistd.h>
 #elif defined(__linux__) && !defined(__ANDROID__)
-#include <syscall.h>
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <windows.h>
 #endif
-
-#if defined(_WIN32)
-typedef uint32_t thread_id;
-#else
-typedef pid_t thread_id;
-#endif
-
-static thread_id GetThreadId() {
-#if defined(__BIONIC__)
-  return gettid();
-#elif defined(__APPLE__)
-  return syscall(SYS_thread_selfid);
-#elif defined(__linux__)
-  return syscall(__NR_gettid);
-#elif defined(_WIN32)
-  return GetCurrentThreadId();
-#endif
-}
 
 namespace {
 #if defined(__GLIBC__)
@@ -105,7 +84,7 @@ const char* getprogname() {
       // String truncation or some other error.
       strcpy(progname, "<unknown>");
     } else {
-      strcpy(progname, basename(longname));
+      strcpy(progname, Basename(longname));
     }
     first = false;
   }
@@ -203,8 +182,10 @@ void StderrLogger(LogId, LogSeverity severity, const char*, const char* file,
   static_assert(arraysize(log_characters) - 1 == FATAL + 1,
                 "Mismatch in size of log_characters and values in LogSeverity");
   char severity_char = log_characters[severity];
+  std::stringstream stid; stid << std::this_thread::get_id();
+  int tid; std::stringstream(stid.str()) >> tid;
   fprintf(stderr, "%s %c %s %5d %5d %s:%u] %s\n", ProgramInvocationName().c_str(),
-          severity_char, timestamp, getpid(), GetThreadId(), file, line, message);
+          severity_char, timestamp, getpid(), tid, file, line, message);
 }
 
 void DefaultAborter(const char* abort_message) {
@@ -268,7 +249,7 @@ void InitLogging(char* argv[], LogFunction&& logger, AbortFunction&& aborter) {
   // and there are a couple of argv[0] variants that are commonly used.
   if (argv != nullptr) {
     std::lock_guard<std::mutex> lock(LoggingLock());
-    ProgramInvocationName() = basename(argv[0]);
+    ProgramInvocationName() = Basename(argv[0]);
   }
 
   const char* tags = getenv("ANDROID_LOG_TAGS");
@@ -322,29 +303,13 @@ void SetAborter(AbortFunction&& aborter) {
   Aborter() = std::move(aborter);
 }
 
-static const char* GetFileBasename(const char* file) {
-  // We can't use basename(3) even on Unix because the Mac doesn't
-  // have a non-modifying basename.
-  const char* last_slash = strrchr(file, '/');
-  if (last_slash != nullptr) {
-    return last_slash + 1;
-  }
-#if defined(_WIN32)
-  const char* last_backslash = strrchr(file, '\\');
-  if (last_backslash != nullptr) {
-    return last_backslash + 1;
-  }
-#endif
-  return file;
-}
-
 // This indirection greatly reduces the stack impact of having lots of
 // checks/logging in a function.
 class LogMessageData {
  public:
   LogMessageData(const char* file, unsigned int line, LogId id,
                  LogSeverity severity, int error)
-      : file_(GetFileBasename(file)),
+      : file_(Basename(file)),
         line_number_(line),
         id_(id),
         severity_(severity),
@@ -352,7 +317,7 @@ class LogMessageData {
   }
 
   const char* GetFile() const {
-    return file_;
+    return file_.c_str();
   }
 
   unsigned int GetLineNumber() const {
@@ -381,7 +346,7 @@ class LogMessageData {
 
  private:
   std::ostringstream buffer_;
-  const char* const file_;
+  const std::string file_;
   const unsigned int line_number_;
   const LogId id_;
   const LogSeverity severity_;

@@ -15,8 +15,7 @@
  */
 
 #include "android-base/logging.h"
-
-#include <libgen.h>
+#include "android-base/file.h"
 
 #if defined(_WIN32)
 #include <signal.h>
@@ -201,7 +200,7 @@ static std::string make_log_pattern(android::base::LogSeverity severity,
   std::string holder(__FILE__);
   return android::base::StringPrintf(
       "%c \\d+-\\d+ \\d+:\\d+:\\d+ \\s*\\d+ \\s*\\d+ %s:\\d+] %s",
-      log_char, basename(&holder[0]), message);
+      log_char, Basename(&holder[0]).c_str(), message);
 }
 
 static void CheckMessage(const CapturedStderr& cap,
