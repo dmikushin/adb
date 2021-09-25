@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <libgen.h>
 #include <algorithm>
 #include <array>
 
