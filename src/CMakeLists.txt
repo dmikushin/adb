@@ -74,30 +74,27 @@ set(adb_cmd_srcs
     shell_service_protocol.cpp
    )
 
+set(SOURCES_BASE
+    ${libadb_srcs}
+    ${adb_cmd_srcs}
+    ${libadb_host_src})
+
 if(CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
-  set(SOURCES_BASE
-      ${libadb_srcs}
-      ${adb_cmd_srcs}
-      ${libadb_host_src}
+  list(APPEND SOURCES_BASE
       ${windows_srcs}
     )
 elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
-  set(SOURCES_BASE
-      ${libadb_srcs}
-      ${adb_cmd_srcs}
-      ${libadb_host_src}
+  list(APPEND SOURCES_BASE
       ${libadb_posix_srcs}
       ${linux_srcs}
     )
 elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
-  set(SOURCES_BASE
-      ${libadb_srcs}
-      ${adb_cmd_srcs}
-      ${libadb_host_src}
+  list(APPEND SOURCES_BASE
       ${libadb_posix_srcs}
       ${darwin_srcs}
     )
 else()
+  message(FATAL_ERROR "Unsupported OS ${CMAKE_HOST_SYSTEM_NAME}")
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES_BASE})
