@@ -17,7 +17,6 @@
 #include "diagnose_usb.h"
 
 #include <errno.h>
-#include <unistd.h>
 
 #include <string>
 
