@@ -21,7 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -33,7 +35,19 @@
 
 #include <string>
 
+#ifndef STD_ERR_FD 
+#define STD_ERR_FD (fileno(stderr)) 
+#endif
+
 #ifdef _WIN32
+
+#define fileno _fileno
+
+#include <io.h>
+
+#define S_IRUSR  S_IREAD     /* Read user */
+#define S_IWUSR  S_IWRITE    /* Write user */
+
 int mkstemp(char* template_name) {
   if (_mktemp(template_name) == nullptr) {
     return -1;
@@ -127,13 +141,13 @@ void CapturedStderr::init() {
   // that we can immediately read back what was written to stderr.
   CHECK_EQ(0, setvbuf(stderr, NULL, _IONBF, 0));
 #endif
-  old_stderr_ = dup(STDERR_FILENO);
+  old_stderr_ = dup(STD_ERR_FD);
   CHECK_NE(-1, old_stderr_);
-  CHECK_NE(-1, dup2(fd(), STDERR_FILENO));
+  CHECK_NE(-1, dup2(fd(), STD_ERR_FD));
 }
 
 void CapturedStderr::reset() {
-  CHECK_NE(-1, dup2(old_stderr_, STDERR_FILENO));
+  CHECK_NE(-1, dup2(old_stderr_, STD_ERR_FD));
   CHECK_EQ(0, close(old_stderr_));
   // Note: cannot restore prior setvbuf() setting.
 }

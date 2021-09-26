@@ -137,6 +137,10 @@ typedef struct {
 
 #define SOCKET_SEND_BUFFERS_MAX_BUFFERS 16
 
+#ifdef _WIN32
+typedef SSIZE_T ssize_t;
+#endif
+
 ssize_t socket_send_buffers(cutils_socket_t sock,
                             const cutils_socket_buffer_t* buffers,
                             size_t num_buffers);

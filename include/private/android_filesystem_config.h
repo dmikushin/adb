@@ -22,7 +22,12 @@
 #ifndef _ANDROID_FILESYSTEM_CONFIG_H_
 #define _ANDROID_FILESYSTEM_CONFIG_H_
 
+#ifndef _WIN32
 #include <sys/cdefs.h>
+#else
+#define __BEGIN_DECLS
+#define __END_DECLS
+#endif
 #include <sys/types.h>
 #include <stdint.h>
 

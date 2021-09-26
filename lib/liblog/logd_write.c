@@ -33,7 +33,9 @@
 #include <sys/un.h>
 #endif
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #ifdef __BIONIC__
 #include <android/set_abort_message.h>
@@ -106,6 +108,9 @@ static enum {
 
 LIBLOG_ABI_PUBLIC int __android_log_dev_available()
 {
+#ifdef _WIN32
+    return 0;
+#else
     if (g_log_status == kLogUninitialized) {
         if (access("/dev/socket/logdw", W_OK) == 0)
             g_log_status = kLogAvailable;
@@ -114,6 +119,7 @@ LIBLOG_ABI_PUBLIC int __android_log_dev_available()
     }
 
     return (g_log_status == kLogAvailable);
+#endif
 }
 
 /* log_init_lock assumed */

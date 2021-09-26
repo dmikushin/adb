@@ -36,6 +36,8 @@
 #include <mach-o/dyld.h>
 #endif
 #if defined(_WIN32)
+#define read _read
+#define write _write
 #include <windows.h>
 #define O_CLOEXEC O_NOINHERIT
 #define O_NOFOLLOW 0
@@ -59,11 +61,12 @@ bool ReadFdToString(int fd, std::string* content) {
   }
 
   char buf[BUFSIZ];
-  ssize_t n;
-  while ((n = TEMP_FAILURE_RETRY([&]{ return read(fd, &buf[0], sizeof(buf)); })) > 0) {
+  while (1) {
+    auto n = TEMP_FAILURE_RETRY([&]{ return read(fd, &buf[0], sizeof(buf)); });
+    if (n == 0) return true;
+    else if (n < 0) return false;
     content->append(buf, n);
   }
-  return (n == 0) ? true : false;
 }
 
 bool ReadFileToString(const std::string& path, std::string* content, bool follow_symlinks) {
@@ -81,7 +84,7 @@ bool WriteStringToFd(const std::string& content, int fd) {
   const char* p = content.data();
   size_t left = content.size();
   while (left > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY([&] { return write(fd, p, left); });
+    auto n = TEMP_FAILURE_RETRY([&] { return write(fd, p, left); });
     if (n == -1) {
       return false;
     }
@@ -144,7 +147,7 @@ bool ReadFully(int fd, void* data, size_t byte_count) {
   uint8_t* p = reinterpret_cast<uint8_t*>(data);
   size_t remaining = byte_count;
   while (remaining > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY([&] { return read(fd, p, remaining); });
+    auto n = TEMP_FAILURE_RETRY([&] { return read(fd, p, remaining); });
     if (n <= 0) return false;
     p += n;
     remaining -= n;
@@ -156,7 +159,7 @@ bool WriteFully(int fd, const void* data, size_t byte_count) {
   const uint8_t* p = reinterpret_cast<const uint8_t*>(data);
   size_t remaining = byte_count;
   while (remaining > 0) {
-    ssize_t n = TEMP_FAILURE_RETRY([&] { return write(fd, p, remaining); });
+    auto n = TEMP_FAILURE_RETRY([&] { return write(fd, p, remaining); });
     if (n == -1) return false;
     p += n;
     remaining -= n;
@@ -165,30 +168,11 @@ bool WriteFully(int fd, const void* data, size_t byte_count) {
 }
 
 bool RemoveFileIfExists(const std::string& path, std::string* err) {
-  struct stat st;
-#if defined(_WIN32)
-  //TODO: Windows version can't handle symbol link correctly.
-  int result = stat(path.c_str(), &st);
-  bool file_type_removable = (result == 0 && S_ISREG(st.st_mode));
-#else
-  int result = lstat(path.c_str(), &st);
-  bool file_type_removable = (result == 0 && (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode)));
-#endif
-  if (result == 0) {
-    if (!file_type_removable) {
-      if (err != nullptr) {
-        *err = "is not a regular or symbol link file";
-      }
-      return false;
-    }
-    if (unlink(path.c_str()) == -1) {
-      if (err != nullptr) {
-        *err = strerror(errno);
-      }
-      return false;
-    }
-  }
-  return true;
+  std::error_code ec;
+  bool result = std::filesystem::remove(path, ec);
+  if (!result)
+    *err = ec.message();
+  return result;
 }
 
 #if !defined(_WIN32)
@@ -201,7 +185,7 @@ bool Readlink(const std::string& path, std::string* result) {
   // whether it actually fit (rather than being truncated to 4095).
   std::vector<char> buf(4095 + 1);
   while (true) {
-    ssize_t size = readlink(path.c_str(), &buf[0], buf.size());
+    auto size = readlink(path.c_str(), &buf[0], buf.size());
     // Unrecoverable error?
     if (size == -1) return false;
     // It fit! (If size == buf.size(), it may have been truncated.)
@@ -245,10 +229,17 @@ std::string GetExecutablePath() {
   }
   return path;
 #elif defined(_WIN32)
-  char path[PATH_MAX + 1];
-  DWORD result = GetModuleFileName(NULL, path, sizeof(path) - 1);
-  if (result == 0 || result == sizeof(path) - 1) return "";
-  path[PATH_MAX - 1] = 0;
+  std::string path;
+  path.reserve(1024);
+  while (1) {
+    DWORD result = GetModuleFileName(NULL, path.data(), path.capacity());
+    if (result == 0) return "";
+    if (result != path.capacity()) {
+      path.resize(result);
+      break;
+    }
+    path.reserve(path.capacity() + 1024);
+  }
   return path;
 #else
 #error unknown OS

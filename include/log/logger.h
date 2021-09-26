@@ -17,6 +17,7 @@
 
 #include <log/log.h>
 #include <log/log_read.h>
+#include <log/align.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,7 @@ extern "C" {
  * driver unless an upgrade to a newer ABI version is requested.
  */
 struct logger_entry {
+#pragma pack(push, 1)
     uint16_t    len;    /* length of the payload */
     uint16_t    __pad;  /* no matter what, we get 2 bytes of padding */
     int32_t     pid;    /* generating process's pid */
@@ -35,7 +37,8 @@ struct logger_entry {
     int32_t     sec;    /* seconds since Epoch */
     int32_t     nsec;   /* nanoseconds */
     char        msg[0]; /* the entry's payload */
-} __attribute__((__packed__));
+#pragma pack(pop)
+};
 
 /*
  * The userspace structure for version 2 of the logger_entry ABI.
@@ -43,6 +46,7 @@ struct logger_entry {
  * is called with version==2; or used with the user space log daemon.
  */
 struct logger_entry_v2 {
+#pragma pack(push, 1)
     uint16_t    len;       /* length of the payload */
     uint16_t    hdr_size;  /* sizeof(struct logger_entry_v2) */
     int32_t     pid;       /* generating process's pid */
@@ -51,9 +55,11 @@ struct logger_entry_v2 {
     int32_t     nsec;      /* nanoseconds */
     uint32_t    euid;      /* effective UID of logger */
     char        msg[0];    /* the entry's payload */
-} __attribute__((__packed__));
+#pragma pack(pop)
+};
 
 struct logger_entry_v3 {
+#pragma pack(push, 1)
     uint16_t    len;       /* length of the payload */
     uint16_t    hdr_size;  /* sizeof(struct logger_entry_v3) */
     int32_t     pid;       /* generating process's pid */
@@ -62,9 +68,11 @@ struct logger_entry_v3 {
     int32_t     nsec;      /* nanoseconds */
     uint32_t    lid;       /* log id of the payload */
     char        msg[0];    /* the entry's payload */
-} __attribute__((__packed__));
+#pragma pack(pop)
+};
 
 struct logger_entry_v4 {
+#pragma pack(push, 1)
     uint16_t    len;       /* length of the payload */
     uint16_t    hdr_size;  /* sizeof(struct logger_entry_v4) */
     int32_t     pid;       /* generating process's pid */
@@ -74,7 +82,8 @@ struct logger_entry_v4 {
     uint32_t    lid;       /* log id of the payload, bottom 4 bits currently */
     uint32_t    uid;       /* generating process's uid */
     char        msg[0];    /* the entry's payload */
-} __attribute__((__packed__));
+#pragma pack(pop)
+};
 
 /*
  * The maximum size of the log entry payload that can be
@@ -93,14 +102,14 @@ struct logger_entry_v4 {
 #define NS_PER_SEC 1000000000ULL
 
 struct log_msg {
-    union {
+    union ALIGN(4) {
         unsigned char buf[LOGGER_ENTRY_MAX_LEN + 1];
         struct logger_entry_v4 entry;
         struct logger_entry_v4 entry_v4;
         struct logger_entry_v3 entry_v3;
         struct logger_entry_v2 entry_v2;
         struct logger_entry    entry_v1;
-    } __attribute__((aligned(4)));
+    };
 #ifdef __cplusplus
     /* Matching log_time operators */
     bool operator== (const log_msg &T) const
@@ -164,6 +173,11 @@ int android_logger_get_log_version(struct logger *logger);
 
 struct logger_list;
 
+#ifdef _WIN32
+#include <windows.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 ssize_t android_logger_get_statistics(struct logger_list *logger_list,
                                       char *buf, size_t len);
 ssize_t android_logger_get_prune_list(struct logger_list *logger_list,
@@ -179,6 +193,10 @@ int android_logger_set_prune_list(struct logger_list *logger_list,
 #define ANDROID_LOG_WRAP     0x40000000 /* Block until buffer about to wrap */
 #define ANDROID_LOG_WRAP_DEFAULT_TIMEOUT 7200 /* 2 hour default */
 #define ANDROID_LOG_PSTORE   0x80000000
+
+#ifdef _WIN32
+typedef DWORD pid_t;
+#endif
 
 struct logger_list *android_logger_list_alloc(int mode,
                                               unsigned int tail,

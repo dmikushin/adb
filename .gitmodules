@@ -1,3 +1,6 @@
 [submodule "ThirdParty/openssl"]
 	path = ThirdParty/openssl
 	url = https://github.com/janbar/openssl-cmake
+[submodule "ThirdParty/c11"]
+	path = ThirdParty/c11
+	url = https://github.com/cdschreiber/c11.git

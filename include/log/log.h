@@ -32,7 +32,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <log/logd.h>
 #include <log/uio.h>

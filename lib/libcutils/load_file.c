@@ -16,8 +16,13 @@
 */
 
 #include <stdlib.h>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include <fcntl.h>
+#include <stdio.h>
 
 void *load_file(const char *fn, unsigned *_sz)
 {

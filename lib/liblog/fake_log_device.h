@@ -25,6 +25,12 @@ struct iovec;
 
 LIBLOG_HIDDEN int fakeLogOpen(const char *pathName, int flags);
 LIBLOG_HIDDEN int fakeLogClose(int fd);
+
+#ifdef _WIN32
+#include <windows.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 LIBLOG_HIDDEN ssize_t fakeLogWritev(int fd,
                                     const struct iovec* vector, int count);
 

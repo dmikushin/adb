@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(liblog)
+project(liblog C)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 11)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/lib/base/include)
@@ -16,3 +16,6 @@ add_library(${PROJECT_NAME} STATIC
         logd_write.c
         log_event_write.c
         fake_log_device.c)
+if (MSVC)
+target_include_directories(${PROJECT_NAME} PRIVATE ${C11_INCLUDE_DIRS})
+endif()

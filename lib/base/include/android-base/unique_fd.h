@@ -20,6 +20,10 @@
 
 #if !defined(_WIN32)
 #include <sys/socket.h>
+#include <unistd.h>
+#else
+#include <io.h>
+#define close _close
 #endif
 
 #include <stdio.h>
@@ -76,7 +80,11 @@ struct DefaultCloser {
     // Using TEMP_FAILURE_RETRY will either lead to EBADF or closing someone
     // else's fd.
     // http://lkml.indiana.edu/hypermail/linux/kernel/0509.1/0877.html
+#ifdef _WIN32
+    close(fd);
+#else
     ::close(fd);
+#endif
   }
 #endif
 };
@@ -102,7 +110,11 @@ class unique_fd_impl final {
   int get() const { return fd_; }
   operator int() const { return get(); }
 
-  int release() __attribute__((warn_unused_result)) {
+  int release()
+#ifndef _WIN32
+    __attribute__((warn_unused_result))
+#endif
+  {
     tag(fd_, this, nullptr);
     int ret = fd_;
     fd_ = -1;

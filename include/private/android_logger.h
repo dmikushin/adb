@@ -30,47 +30,61 @@
 #define LOGGER_MAGIC 'l'
 
 /* Header Structure to pstore */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     uint8_t magic;
     uint16_t len;
     uint16_t uid;
     uint16_t pid;
+#pragma pack(pop)
 } android_pmsg_log_header_t;
 
 /* Header Structure to logd, and second header for pstore */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     typeof_log_id_t id;
     uint16_t tid;
     log_time realtime;
+#pragma pack(pop)
 } android_log_header_t;
 
 /* Event Header Structure to logd */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     int32_t tag;  // Little Endian Order
+#pragma pack(pop)
 } android_event_header_t;
 
 /* Event payload EVENT_TYPE_INT */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     int8_t type;  // EVENT_TYPE_INT
     int32_t data; // Little Endian Order
+#pragma pack(pop)
 } android_event_int_t;
 
 /* Event with single EVENT_TYPE_INT */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     android_event_header_t header;
     android_event_int_t payload;
+#pragma pack(pop)
 } android_log_event_int_t;
 
 /* Event payload EVENT_TYPE_LONG */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     int8_t type;  // EVENT_TYPE_LONG
     int64_t data; // Little Endian Order
+#pragma pack(pop)
 } android_event_long_t;
 
 /* Event with single EVENT_TYPE_LONG */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     android_event_header_t header;
     android_event_long_t payload;
+#pragma pack(pop)
 } android_log_event_long_t;
 
 /*
@@ -84,18 +98,22 @@ typedef struct __attribute__((__packed__)) {
  * in C++.
  * http://stackoverflow.com/questions/4412749/are-flexible-array-members-valid-in-c
  */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     int8_t type;    // EVENT_TYPE_STRING;
     int32_t length; // Little Endian Order
     char data[];
+#pragma pack(pop)
 } android_event_string_t;
 
 /* Event with single EVENT_TYPE_STRING */
-typedef struct __attribute__((__packed__)) {
+typedef struct {
+#pragma pack(push, 1)
     android_event_header_t header;
     int8_t type;    // EVENT_TYPE_STRING;
     int32_t length; // Little Endian Order
     char data[];
+#pragma pack(pop)
 } android_log_event_string_t;
 
 #if defined(__cplusplus)

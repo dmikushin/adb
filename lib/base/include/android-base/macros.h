@@ -17,9 +17,11 @@
 #ifndef ANDROID_BASE_MACROS_H
 #define ANDROID_BASE_MACROS_H
 
-#include <stddef.h>  // for size_t
-#include <unistd.h>
 #include <errno.h>
+#include <stddef.h>  // for size_t
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 template<typename T>
 auto TEMP_FAILURE_RETRY(T&& exp) -> decltype(exp()) {

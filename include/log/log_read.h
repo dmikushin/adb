@@ -161,9 +161,11 @@ public:
 #else
 
 typedef struct log_time {
+#pragma pack(push, 1)
     uint32_t tv_sec;
     uint32_t tv_nsec;
-} __attribute__((__packed__)) log_time;
+#pragma pack(pop)
+} log_time;
 
 #endif
 

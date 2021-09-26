@@ -17,8 +17,6 @@
 #ifndef _LIBLOG_CDEFS_H__
 #define _LIBLOG_CDEFS_H__
 
-#include <sys/cdefs.h>
-
 /* Declare this library function hidden and internal */
 #if defined(_WIN32)
 #define LIBLOG_HIDDEN

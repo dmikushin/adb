@@ -84,7 +84,7 @@ const char* getprogname() {
       // String truncation or some other error.
       strcpy(progname, "<unknown>");
     } else {
-      strcpy(progname, Basename(longname));
+      strcpy(progname, android::base::Basename(longname).c_str());
     }
     first = false;
   }
