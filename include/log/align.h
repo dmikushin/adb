@@ -14,7 +14,7 @@
 #ifdef __alignas_is_defined
 #    define ALIGN(X) alignas(X)
 #else
-#    ifdef __GNUG__
+#    ifdef __GNUC__
 #        define ALIGN(X) __attribute__ ((aligned(X)))
 #    elif defined(_MSC_VER)
 #        define ALIGN(X) __declspec(align(X))
@@ -26,7 +26,7 @@
 #ifdef __alignof_is_defined
 #    define ALIGNOF(X) alignof(x)
 #else
-#    ifdef __GNUG__
+#    ifdef __GNUC__
 #        define ALIGNOF(X) __alignof__ (X)
 #    elif defined(_MSC_VER)
 #        define ALIGNOF(X) __alignof(X)
