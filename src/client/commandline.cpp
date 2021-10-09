@@ -21,6 +21,12 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#ifdef _WIN32
+#include "getopt_win32.h"
+#include "asprintf.h"
+#else
+#include <getopt.h>
+#endif
 #include <inttypes.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -64,6 +70,23 @@
 #include "shell_protocol.h"
 #include "sysdeps/chrono.h"
 #include "sysdeps/memory.h"
+
+#ifdef _WIN32
+#include <io.h>
+#define fileno _fileno
+#endif
+
+#ifndef STD_IN_FD 
+#define STD_IN_FD (fileno(stdin)) 
+#endif
+
+#ifndef STD_OUT_FD 
+#define STD_OUT_FD (fileno(stdout)) 
+#endif
+
+#ifndef STD_ERR_FD
+#define STD_ERR_FD (fileno(stderr))
+#endif
 
 extern int gListenAll;
 
@@ -236,10 +259,10 @@ void stdin_raw_restore();
 static termios g_saved_terminal_state;
 
 static void stdin_raw_init() {
-    if (tcgetattr(STDIN_FILENO, &g_saved_terminal_state)) return;
+    if (tcgetattr(STD_IN_FD, &g_saved_terminal_state)) return;
 
     termios tio;
-    if (tcgetattr(STDIN_FILENO, &tio)) return;
+    if (tcgetattr(STD_IN_FD, &tio)) return;
 
     cfmakeraw(&tio);
 
@@ -247,11 +270,11 @@ static void stdin_raw_init() {
     tio.c_cc[VTIME] = 0;
     tio.c_cc[VMIN] = 1;
 
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio);
+    tcsetattr(STD_IN_FD, TCSAFLUSH, &tio);
 }
 
 static void stdin_raw_restore() {
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_saved_terminal_state);
+    tcsetattr(STD_IN_FD, TCSAFLUSH, &g_saved_terminal_state);
 }
 #endif
 
@@ -314,10 +337,10 @@ int read_and_dump(int fd, bool use_shell_protocol = false,
 }
 
 static void stdinout_raw_prologue(int inFd, int outFd, int& old_stdin_mode, int& old_stdout_mode) {
-    if (inFd == STDIN_FILENO) {
+    if (inFd == STD_IN_FD) {
         stdin_raw_init();
 #ifdef _WIN32
-        old_stdin_mode = _setmode(STDIN_FILENO, _O_BINARY);
+        old_stdin_mode = _setmode(STD_IN_FD, _O_BINARY);
         if (old_stdin_mode == -1) {
             fatal_errno("could not set stdin to binary");
         }
@@ -325,8 +348,8 @@ static void stdinout_raw_prologue(int inFd, int outFd, int& old_stdin_mode, int&
     }
 
 #ifdef _WIN32
-    if (outFd == STDOUT_FILENO) {
-        old_stdout_mode = _setmode(STDOUT_FILENO, _O_BINARY);
+    if (outFd == STD_OUT_FD) {
+        old_stdout_mode = _setmode(STD_OUT_FD, _O_BINARY);
         if (old_stdout_mode == -1) {
             fatal_errno("could not set stdout to binary");
         }
@@ -335,18 +358,18 @@ static void stdinout_raw_prologue(int inFd, int outFd, int& old_stdin_mode, int&
 }
 
 static void stdinout_raw_epilogue(int inFd, int outFd, int old_stdin_mode, int old_stdout_mode) {
-    if (inFd == STDIN_FILENO) {
+    if (inFd == STD_IN_FD) {
         stdin_raw_restore();
 #ifdef _WIN32
-        if (_setmode(STDIN_FILENO, old_stdin_mode) == -1) {
+        if (_setmode(STD_IN_FD, old_stdin_mode) == -1) {
             fatal_errno("could not restore stdin mode");
         }
 #endif
     }
 
 #ifdef _WIN32
-    if (outFd == STDOUT_FILENO) {
-        if (_setmode(STDOUT_FILENO, old_stdout_mode) == -1) {
+    if (outFd == STD_OUT_FD) {
+        if (_setmode(STD_OUT_FD, old_stdout_mode) == -1) {
             fatal_errno("could not restore stdout mode");
         }
     }
@@ -365,7 +388,7 @@ void copy_to_file(int inFd, int outFd) {
     stdinout_raw_prologue(inFd, outFd, old_stdin_mode, old_stdout_mode);
 
     while (true) {
-        if (inFd == STDIN_FILENO) {
+        if (inFd == STD_IN_FD) {
             len = unix_read(inFd, buf.data(), buf.size());
         } else {
             len = adb_read(inFd, buf.data(), buf.size());
@@ -378,7 +401,7 @@ void copy_to_file(int inFd, int outFd) {
             D("copy_to_file(): read failed: %s", strerror(errno));
             break;
         }
-        if (outFd == STDOUT_FILENO) {
+        if (outFd == STD_OUT_FD) {
             fwrite(buf.data(), 1, len, stdout);
             fflush(stdout);
         } else {
@@ -410,7 +433,7 @@ static void send_window_size_change(int fd, std::unique_ptr<ShellProtocol>& shel
 #if defined(_WIN32)
     // If stdout is redirected to a non-console, we won't be able to get the
     // console size, but that makes sense.
-    const intptr_t intptr_handle = _get_osfhandle(STDOUT_FILENO);
+    const intptr_t intptr_handle = _get_osfhandle(STD_OUT_FD);
     if (intptr_handle == -1) return;
 
     const HANDLE handle = reinterpret_cast<const HANDLE>(intptr_handle);
@@ -615,7 +638,7 @@ static int RemoteShell(bool use_shell_protocol, const std::string& type_arg,
         LOG(ERROR) << "couldn't allocate StdinReadArgs object";
         return 1;
     }
-    args->stdin_fd = STDIN_FILENO;
+    args->stdin_fd = STD_IN_FD;
     args->write_fd = fd;
     args->raw_stdin = raw_stdin;
     args->escape_char = escape_char;
@@ -725,12 +748,12 @@ static int adb_shell(int argc, const char** argv) {
         // If stdin isn't a TTY, default to a raw shell; this lets
         // things like `adb shell < my_script.sh` work as expected.
         // Non-interactive shells should also not have a pty.
-        if (!unix_isatty(STDIN_FILENO) || !is_interactive) {
+        if (!unix_isatty(STD_IN_FD) || !is_interactive) {
             shell_type_arg = kShellServiceArgRaw;
         }
     } else if (tty == kPtyYes) {
         // A single -t arg isn't enough to override implicit -T.
-        if (!unix_isatty(STDIN_FILENO)) {
+        if (!unix_isatty(STD_IN_FD)) {
             fprintf(stderr,
                     "Remote PTY will not be allocated because stdin is not a terminal.\n"
                     "Use multiple -t options to force remote PTY allocation.\n");
@@ -961,9 +984,9 @@ static int ppp(int argc, const char** argv) {
 
         // child side
 
-        dup2(fd, STDIN_FILENO);
-        dup2(fd, STDOUT_FILENO);
-        adb_close(STDERR_FILENO);
+        dup2(fd, STD_IN_FD);
+        dup2(fd, STD_OUT_FD);
+        adb_close(STD_ERR_FD);
         adb_close(fd);
 
         err = execvp("pppd", (char * const *)ppp_args);
@@ -1052,7 +1075,7 @@ static bool adb_root(const char* command) {
     }
 
     fflush(stdout);
-    WriteFdExactly(STDOUT_FILENO, buf, sizeof(buf) - bytes_left);
+    WriteFdExactly(STD_OUT_FD, buf, sizeof(buf) - bytes_left);
     if (cur != buf && strstr(buf, "restarting") == nullptr) {
         return true;
     }
@@ -1137,7 +1160,7 @@ static void write_zeros(int bytes, int fd) {
 
     stdinout_raw_prologue(-1, fd, old_stdin_mode, old_stdout_mode);
 
-    if (fd == STDOUT_FILENO) {
+    if (fd == STD_OUT_FD) {
         fwrite(buf.data(), 1, bytes, stdout);
         fflush(stdout);
     } else {
@@ -1229,7 +1252,7 @@ static int restore(int argc, const char** argv) {
     write_zeros(512*2, fd);
 
     // Wait until the other side finishes, or it'll get sent SIGHUP.
-    copy_to_file(fd, STDOUT_FILENO);
+    copy_to_file(fd, STD_OUT_FD);
 
     adb_close(fd);
     adb_close(tarFd);
@@ -1547,9 +1570,9 @@ int adb_commandline(int argc, const char** argv) {
         }
 
         if (exec_in) {
-            copy_to_file(STDIN_FILENO, fd);
+            copy_to_file(STD_IN_FD, fd);
         } else {
-            copy_to_file(fd, STDOUT_FILENO);
+            copy_to_file(fd, STD_OUT_FD);
         }
 
         adb_close(fd);

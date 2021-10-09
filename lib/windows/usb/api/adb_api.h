@@ -98,12 +98,17 @@ typedef struct _AdbEndpointInformation {
 // whose source files include this file see ADBWIN_API functions as being
 // imported from a DLL, whereas this DLL sees symbols defined with this macro
 // as being exported.
+#ifdef ADBWIN_SHARED
 #ifdef ADBWIN_EXPORTS
 #define ADBWIN_API EXTERN_C __declspec(dllexport)
 #define ADBWIN_API_CLASS     __declspec(dllexport)
 #else
 #define ADBWIN_API EXTERN_C __declspec(dllimport)
 #define ADBWIN_API_CLASS     __declspec(dllimport)
+#endif
+#else
+#define ADBWIN_API EXTERN_C
+#define ADBWIN_API_CLASS
 #endif
 
 /** \brief Handle to an API object.

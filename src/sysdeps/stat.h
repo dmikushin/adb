@@ -18,7 +18,9 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 
 #if defined(_WIN32)
 // stat is broken on Win32: stat on a path with a trailing slash or backslash will always fail with

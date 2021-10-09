@@ -19,10 +19,13 @@
 #include "adb_utils.h"
 #include "adb_unique_fd.h"
 
+#include <filesystem>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <vector>
@@ -54,13 +57,22 @@ static constexpr char kNullFileName[] = "NUL";
 static constexpr char kNullFileName[] = "/dev/null";
 #endif
 
+#ifdef _WIN32
+#include <io.h>
+#define fileno _fileno
+#endif
+
+#ifndef STD_IN_FD 
+#define STD_IN_FD (fileno(stdin)) 
+#endif
+
 void close_stdin() {
     int fd = unix_open(kNullFileName, O_RDONLY);
     if (fd == -1) {
         fatal_errno("failed to open %s", kNullFileName);
     }
 
-    if (TEMP_FAILURE_RETRY([&] { return dup2(fd, STDIN_FILENO); }) == -1) {
+    if (TEMP_FAILURE_RETRY([&] { return dup2(fd, STD_IN_FD); }) == -1) {
         fatal_errno("failed to redirect stdin to %s", kNullFileName);
     }
     unix_close(fd);
@@ -74,8 +86,9 @@ bool getcwd(std::string* s) {
 }
 
 bool directory_exists(const std::string& path) {
-  struct stat sb;
-  return stat(path.c_str(), &sb) != -1 && S_ISDIR(sb.st_mode);
+  std::error_code ec;
+  std::filesystem::directory_entry d(path);
+  return d.exists(ec);
 }
 
 std::string escape_arg(const std::string& s) {
@@ -121,10 +134,9 @@ bool mkdirs(const std::string& path) {
   //   components.
 
   // If path points to a symlink to a directory, that's fine.
-  struct stat sb;
-  if (stat(path.c_str(), &sb) != -1 && S_ISDIR(sb.st_mode)) {
-    return true;
-  }
+  std::error_code ec;
+  std::filesystem::directory_entry d(path);
+  if (d.exists(ec)) return true;
 
   const std::string parent(android::base::Dirname(path));
 

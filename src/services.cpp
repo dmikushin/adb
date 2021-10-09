@@ -65,7 +65,10 @@ unique_fd create_service_thread(const char* service_name, std::function<void(uni
     }
 #endif // !ADB_HOST
 
-    std::thread(service_bootstrap_func, service_name, func, unique_fd(s[1])).detach();
+    std::thread th([&] {
+        service_bootstrap_func(service_name, func, unique_fd(s[1]));
+    });
+    th.detach();
 
     D("service thread started, %d:%d",s[0], s[1]);
     return unique_fd(s[0]);
@@ -115,7 +118,9 @@ static void wait_for_state(int fd, void* data) {
             SendOkay(fd);
             break;
         } else if (!is_ambiguous) {
-            adb_pollfd pfd = {.fd = fd, .events = POLLIN };
+            adb_pollfd pfd;
+	    pfd.fd = fd;
+	    pfd.events = POLLIN;
             int rc = adb_poll(&pfd, 1, 1000);
             if (rc < 0) {
                 SendFail(fd, error);
@@ -198,7 +203,7 @@ asocket* host_service_to_socket(const char* name, const char* serial, TransportI
     } else if (android::base::StartsWith(name, "wait-for-")) {
         name += strlen("wait-for-");
 
-        std::unique_ptr<state_info> sinfo = std::make_unique<state_info>();
+        std::unique_ptr<state_info> sinfo(new state_info());
         if (sinfo == nullptr) {
             fprintf(stderr, "couldn't allocate state_info: %s", strerror(errno));
             return nullptr;

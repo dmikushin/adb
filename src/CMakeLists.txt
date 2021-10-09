@@ -57,6 +57,7 @@ set(darwin_srcs
 
 set(windows_srcs
     client/usb_windows.cpp
+    client/getopt_win32.c
     sysdeps_win32.cpp
     sysdeps/win32/errno.cpp
     sysdeps/win32/stat.cpp
@@ -148,13 +149,12 @@ if (WIN32)
    )
 endif()
 
-set(LINK_LIBS libbase libbuildversion libcrypto_utils libcutils libdiagnose_usb liblog crypto pthread)
+set(LINK_LIBS libbase libbuildversion libcrypto_utils libcutils libdiagnose_usb liblog crypto)
 
 if (WIN32)
-    set(LINK_LIBS ${LINK_LIBS} ssl AdbWinApi AdbWinUsbApi ws2_32 gdi32 userenv)
-    target_link_options(${PROJECT_NAME} PRIVATE -municode -static-libgcc -static-libstdc++)
+    set(LINK_LIBS ${LINK_LIBS} ssl AdbWinApi AdbWinUsbApi ws2_32 gdi32 userenv -municode)
 elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
-    set(LINK_LIBS ${LINK_LIBS} rt)
+    set(LINK_LIBS ${LINK_LIBS} pthread rt)
     set_target_properties(${PROJECT_NAME} PROPERTIES
                         LINK_FLAGS "-Wl,-rpath=/opt/lib/android/"
                         BUILD_WITH_INSTALL_RPATH 1)
@@ -162,7 +162,7 @@ elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
 elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     FIND_LIBRARY(IOKit_LIBRARY IOKit)
     FIND_LIBRARY(Foundation_LIBRARY Foundation)
-    set(LINK_LIBS ${LINK_LIBS} ${Foundation_LIBRARY} ${IOKit_LIBRARY})
+    set(LINK_LIBS ${LINK_LIBS} pthread ${Foundation_LIBRARY} ${IOKit_LIBRARY})
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${LINK_LIBS})

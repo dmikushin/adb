@@ -25,7 +25,7 @@
 #endif
 
 #include <errno.h>
-
+#include <stdbool.h>
 #include <string>
 #include <vector>
 
@@ -45,15 +45,29 @@
 
 #ifdef _WIN32
 
+#define __inline__ inline
+
+// http://msdn2.microsoft.com/en-us/library/ms740481.aspx
+#define SHUT_RDWR SD_BOTH
+#define SHUT_RD   SD_RECEIVE
+#define SHUT_WR   SD_SEND
+
 #include <ctype.h>
 #include <direct.h>
-#include <dirent.h>
+#include <dirent_win32.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <io.h>
 #include <process.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+struct utimbuf {
+    time_t actime; // Access time
+    time_t modtime; // Modification time.
+};
+#else
 #include <utime.h>
+#endif
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>
@@ -205,12 +219,39 @@ extern int adb_closedir(DIR* dir);
 extern int adb_utime(const char *, struct utimbuf *);
 extern int adb_chmod(const char *, int);
 
-extern int adb_vfprintf(FILE* stream, const char* format, va_list ap)
-        __attribute__((__format__(__printf__, 2, 0)));
-extern int adb_vprintf(const char* format, va_list ap) __attribute__((__format__(__printf__, 1, 0)));
-extern int adb_fprintf(FILE* stream, const char* format, ...)
-        __attribute__((__format__(__printf__, 2, 3)));
-extern int adb_printf(const char* format, ...) __attribute__((__format__(__printf__, 1, 2)));
+// https://stackoverflow.com/a/6849629/4063520
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+
+extern int adb_vfprintf(FILE* stream, FORMAT_STRING(const char* format), va_list ap)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 2, 0)))
+#endif
+;
+extern int adb_vprintf(FORMAT_STRING(const char* format), va_list ap)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 1, 0)))
+#endif
+;
+extern int adb_fprintf(FILE* stream, FORMAT_STRING(const char* format), ...)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 2, 3)))
+#endif
+;
+extern int adb_printf(FORMAT_STRING(const char* format), ...)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 1, 2)))
+#endif
+;
 
 extern int adb_fputs(const char* buf, FILE* stream);
 extern int adb_fputc(int ch, FILE* stream);

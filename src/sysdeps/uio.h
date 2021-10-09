@@ -26,6 +26,11 @@ struct adb_iovec {
     void* iov_base;
 };
 
+#ifdef _WIN32
+#include <windows.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 ssize_t adb_writev(int fd, const adb_iovec* iov, int iovcnt);
 
 #else
@@ -34,6 +39,7 @@ ssize_t adb_writev(int fd, const adb_iovec* iov, int iovcnt);
 using adb_iovec = struct iovec;
 #define adb_writev writev
 
+#pragma GCC poison writev
+
 #endif
 
-#pragma GCC poison writev

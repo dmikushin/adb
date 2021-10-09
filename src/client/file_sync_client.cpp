@@ -16,17 +16,36 @@
 
 #include "client/file_sync_client.h"
 
+#ifdef _WIN32
+#include <dirent_win32.h>
+#else
 #include <dirent.h>
+#endif
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
+  #define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#endif
+#if !defined(S_ISDIR) && defined(S_IFMT) && defined(S_IFDIR)
+  #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif
+#if !defined(S_ISCHR) && defined(S_IFMT) && defined(S_IFCHR)
+  #define S_ISCHR(m) (((m) & S_IFMT) == S_IFCHR)
+#endif
+#ifdef _WIN32
+typedef int mode_t;
+#else
 #include <sys/time.h>
+#endif
 #include <sys/types.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
 #include <utime.h>
+#endif
 
 #include <chrono>
 #include <functional>
@@ -240,7 +259,8 @@ class SyncConnection {
     bool IsValid() { return fd >= 0; }
 
     bool ReceivedError(const char* from, const char* to) {
-        adb_pollfd pfd = {.fd = fd, .events = POLLIN};
+        adb_pollfd pfd;
+       	pfd.fd = fd; pfd.events = POLLIN;
         int rc = adb_poll(&pfd, 1, 0);
         if (rc < 0) {
             Error("failed to poll: %s", strerror(errno));
@@ -515,7 +535,24 @@ class SyncConnection {
         return false;
     }
 
-    void Printf(const char* fmt, ...) __attribute__((__format__(__printf__, 2, 3))) {
+// https://stackoverflow.com/a/6849629/4063520
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+
+    void Printf(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32 
+        __attribute__((__format__(__printf__, 2, 3)))
+#endif
+    {
         std::string s;
 
         va_list ap;
@@ -526,7 +563,11 @@ class SyncConnection {
         line_printer_.Print(s, LinePrinter::INFO);
     }
 
-    void Println(const char* fmt, ...) __attribute__((__format__(__printf__, 2, 3))) {
+    void Println(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 2, 3)))
+#endif
+    {
         std::string s;
 
         va_list ap;
@@ -538,7 +579,11 @@ class SyncConnection {
         line_printer_.KeepInfoLine();
     }
 
-    void Error(const char* fmt, ...) __attribute__((__format__(__printf__, 2, 3))) {
+    void Error(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 2, 3)))
+#endif
+    {
         std::string s = "adb: error: ";
 
         va_list ap;
@@ -549,7 +594,11 @@ class SyncConnection {
         line_printer_.Print(s, LinePrinter::ERROR);
     }
 
-    void Warning(const char* fmt, ...) __attribute__((__format__(__printf__, 2, 3))) {
+    void Warning(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 2, 3)))
+#endif
+    {
         std::string s = "adb: warning: ";
 
         va_list ap;
@@ -1120,11 +1169,30 @@ static bool remote_build_list(SyncConnection& sc, std::vector<copyinfo>* file_li
     return true;
 }
 
+#ifdef _WIN32
+#include <time.h>
+
+static void TimetToFileTime(time_t t, LPFILETIME pft)
+{
+    LONGLONG ll = Int32x32To64(t, 10000000) + 116444736000000000;
+    pft->dwLowDateTime = (DWORD) ll;
+    pft->dwHighDateTime = ll >>32;
+}
+#endif
+
 static int set_time_and_mode(const std::string& lpath, time_t time,
                              unsigned int mode) {
+#ifdef _WIN32
+    FILETIME ft;
+    TimetToFileTime(time, &ft);
+    WIN32_FIND_DATAA data;
+    HANDLE h = FindFirstFileA(lpath.c_str(), &data);
+    int r1 = SetFileTime(h, NULL, &ft, &ft); 
+    FindClose(h);
+#else
     struct utimbuf times = { time, time };
     int r1 = utime(lpath.c_str(), &times);
-
+#endif
     /* use umask for permissions */
     mode_t mask = umask(0000);
     umask(mask);

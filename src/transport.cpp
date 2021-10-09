@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <deque>
@@ -1141,9 +1143,10 @@ ReconnectResult atransport::Reconnect() {
 
 // We use newline as our delimiter, make sure to never output it.
 static std::string sanitize(std::string str, bool alphanumeric) {
-    auto pred = alphanumeric ? [](const char c) { return !isalnum(c); }
-                             : [](const char c) { return c == '\n'; };
-    std::replace_if(str.begin(), str.end(), pred, '_');
+    if (alphanumeric)
+      std::replace_if(str.begin(), str.end(), [](const char c) { return !isalnum(c); }, '_');
+    else
+      std::replace_if(str.begin(), str.end(), [](const char c) { return c == '\n'; }, '_');
     return str;
 }
 

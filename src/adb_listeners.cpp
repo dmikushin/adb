@@ -205,7 +205,7 @@ InstallStatus install_listener(const std::string& local_name, const char* connec
         }
     }
 
-    auto listener = std::make_unique<alistener>(local_name, connect_to);
+    auto listener = std::unique_ptr<alistener>(new alistener(local_name, connect_to));
 
     int resolved = 0;
     listener->fd = socket_spec_listen(listener->local_name, error, &resolved);

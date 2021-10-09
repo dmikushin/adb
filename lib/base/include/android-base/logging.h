@@ -52,6 +52,7 @@
 // following code to suppress the evil ERROR macro:
 #ifdef _WIN32
 // windows.h includes wingdi.h which defines an evil macro ERROR.
+#include <windows.h>
 #ifdef ERROR
 #undef ERROR
 #endif

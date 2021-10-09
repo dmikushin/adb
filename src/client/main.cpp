@@ -21,7 +21,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <thread>
 
@@ -38,16 +40,29 @@
 #include "sysdeps/chrono.h"
 #include "transport.h"
 
+#ifdef _WIN32
+#include <io.h>
+#define fileno _fileno
+#endif
+
+#ifndef STD_OUT_FD 
+#define STD_OUT_FD (fileno(stdout)) 
+#endif
+
+#ifndef STD_ERR_FD
+#define STD_ERR_FD (fileno(stderr))
+#endif
+
 static void setup_daemon_logging() {
     const std::string log_file_path(GetLogFilePath());
     int fd = unix_open(log_file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0640);
     if (fd == -1) {
         fatal("cannot open '%s': %s", log_file_path.c_str(), strerror(errno));
     }
-    if (dup2(fd, STDOUT_FILENO) == -1) {
+    if (dup2(fd, STD_OUT_FD) == -1) {
         fatal("cannot redirect stdout: %s", strerror(errno));
     }
-    if (dup2(fd, STDERR_FILENO) == -1) {
+    if (dup2(fd, STD_ERR_FD) == -1) {
         fatal("cannot redirect stderr: %s", strerror(errno));
     }
     unix_close(fd);

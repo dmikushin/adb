@@ -20,20 +20,25 @@
 #include <inttypes.h>
 #ifdef __cplusplus
 #include <atomic>
-using namespace std;
 #else
 #include <stdatomic.h>
 #endif
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#ifndef _WIN32
 #include <sys/cdefs.h>
+#endif
 #include <sys/types.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <cutils/compiler.h>
 
+#ifndef _WIN32
 __BEGIN_DECLS
+#endif
 
 /**
  * The ATRACE_TAG macro can be defined before including this header to trace
@@ -123,7 +128,11 @@ void atrace_set_tracing_enabled(bool enabled);
  * Nonzero indicates setup has completed.
  * Note: This does NOT indicate whether or not setup was successful.
  */
+#ifdef __cplusplus
+extern std::atomic<bool> atrace_is_ready;
+#else
 extern atomic<bool> atrace_is_ready;
+#endif
 
 /**
  * Set of ATRACE_TAG flags to trace for, initialized to ATRACE_TAG_NOT_READY.
@@ -146,6 +155,9 @@ extern int atrace_marker_fd;
 #define ATRACE_INIT() atrace_init()
 static inline void atrace_init()
 {
+#ifdef __cplusplus
+    using namespace std;
+#endif
     if (CC_UNLIKELY(!atomic_load_explicit(&atrace_is_ready, memory_order_acquire))) {
         atrace_setup();
     }
@@ -257,6 +269,8 @@ static inline void atrace_int64(uint64_t tag, const char* name, int64_t value)
     }
 }
 
+#ifndef _WIN32
 __END_DECLS
+#endif
 
 #endif // _LIBS_CUTILS_TRACE_H

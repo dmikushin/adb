@@ -23,6 +23,14 @@
 #include "adb_winusb_endpoint_object.h"
 #include "adb_winusb_io_completion.h"
 
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#error WINAPI_FAMILY_PARTITION
+#endif
+
+#if !(NTDDI_VERSION >= NTDDI_WINXP)
+#error NTDDI_VERSION
+#endif
+
 AdbWinUsbEndpointObject::AdbWinUsbEndpointObject(
     AdbWinUsbInterfaceObject* parent_interf,
     UCHAR endpoint_id,

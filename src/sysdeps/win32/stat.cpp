@@ -18,12 +18,23 @@
 
 #include <errno.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include "dirent_win32.h"
+#endif
 #include <sys/types.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <string>
 
 #include <android-base/utf8.h>
+
+template <typename>
+struct argType;
+
+template <typename R, typename A1, typename A2>
+struct argType<R(A1, A2)> { using type = typename std::remove_pointer<A2>::type; };
 
 // Version of stat() that takes a UTF-8 path.
 int adb_stat(const char* path, struct adb_stat* s) {
@@ -35,7 +46,7 @@ int adb_stat(const char* path, struct adb_stat* s) {
 #define wstat _wstat64
 #endif
 #else
-// <sys/stat.h> has a function prototype for wstat() that should be available.
+#define wstat _wstat
 #endif
 
     std::wstring path_wide;
@@ -52,7 +63,7 @@ int adb_stat(const char* path, struct adb_stat* s) {
         expected_directory = true;
     }
 
-    struct adb_stat st;
+    typename argType<decltype(wstat)>::type st;
     int result = wstat(path_wide.c_str(), &st);
     if (result == 0 && expected_directory) {
         if (!S_ISDIR(st.st_mode)) {

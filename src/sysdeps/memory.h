@@ -41,6 +41,7 @@ struct array_known_bounds<T[N]> {
 }  // namespace internal
 
 
+#if 0
 // [zhongkai: mingw 9.0.2 support c++14]
 #if !defined(__MINGW32__)
 namespace std {
@@ -66,5 +67,6 @@ make_unique(Args&&... args) = delete;
 }  // namespace std
 
 #endif //zhongkai
+#endif
 
 #endif

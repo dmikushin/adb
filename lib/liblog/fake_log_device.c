@@ -456,8 +456,8 @@ static void showLog(LogState *state,
      * Create an array of iovecs large enough to write all of
      * the lines with a prefix and a suffix.
      */
-    const size_t INLINE_VECS = 64;
-    const size_t MAX_LINES   = ((size_t)~0)/(3*sizeof(struct iovec*));
+#define INLINE_VECS (64)
+#define MAX_LINES (((size_t)~0)/(3*sizeof(struct iovec*)))
     struct iovec stackVec[INLINE_VECS];
     struct iovec* vec = stackVec;
     size_t numVecs;
@@ -657,6 +657,12 @@ static int (*redirectOpen)(const char *pathName, int flags) = NULL;
 static int (*redirectClose)(int fd) = NULL;
 static ssize_t (*redirectWritev)(int fd, const struct iovec* vector, int count)
         = NULL;
+
+#ifdef _WIN32
+#include <io.h>
+#define open _open
+#define close _close
+#endif
 
 static void setRedirects()
 {

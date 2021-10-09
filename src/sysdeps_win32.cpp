@@ -48,6 +48,19 @@
 
 #define SIZEOF_MEMBER(t, f) sizeof((reinterpret_cast<t*>(4096))->f)
 
+#ifdef _WIN32
+#include <io.h>
+#define fileno _fileno
+#endif
+
+#ifndef STD_IN_FD 
+#define STD_IN_FD (fileno(stdin)) 
+#endif
+
+#ifdef _WIN32
+#include <Mstcpip.h>
+#endif
+
 extern void fatal(const char *fmt, ...);
 
 /* forward declarations */
@@ -580,10 +593,9 @@ extern int adb_poll(adb_pollfd* fds, size_t nfds, int timeout) {
             fds[i].revents = POLLNVAL;
             ++skipped;
         } else {
-            WSAPOLLFD wsapollfd = {
-                .fd = fh->u.socket,
-                .events = static_cast<short>(fds[i].events)
-            };
+            WSAPOLLFD wsapollfd;
+            wsapollfd.fd = fh->u.socket;
+            wsapollfd.events = static_cast<short>(fds[i].events);
             sockets.push_back(wsapollfd);
             original.push_back(&fds[i]);
         }
@@ -2037,7 +2049,7 @@ static DWORD _old_console_mode; // previous GetConsoleMode() result
 static HANDLE _console_handle;  // when set, console mode should be restored
 
 void stdin_raw_init() {
-    const HANDLE in = _get_console_handle(STDIN_FILENO, &_old_console_mode);
+    const HANDLE in = _get_console_handle(STD_IN_FD, &_old_console_mode);
     if (in == nullptr) {
         return;
     }
@@ -2084,7 +2096,7 @@ void stdin_raw_restore() {
 
 // Called by 'adb shell' and 'adb exec-in' (via unix_read()) to read from stdin.
 int unix_read_interruptible(int fd, void* buf, size_t len) {
-    if ((fd == STDIN_FILENO) && (_console_handle != nullptr)) {
+    if ((fd == STD_IN_FD) && (_console_handle != nullptr)) {
         // If it is a request to read from stdin, and stdin_raw_init() has been
         // called, and it successfully configured the console, then read from
         // the console using Win32 console APIs and partially emulate a unix
@@ -2315,17 +2327,39 @@ int adb_mkdir(const std::string& path, int mode) {
     return _wmkdir(path_wide.c_str());
 }
 
+#ifdef _WIN32
+#include <time.h>
+
+static void TimetToFileTime(time_t t, LPFILETIME pft)
+{
+    LONGLONG ll = Int32x32To64(t, 10000000) + 116444736000000000;
+    pft->dwLowDateTime = (DWORD) ll;
+    pft->dwHighDateTime = ll >>32;
+}
+#endif
+
 // Version of utime() that takes a UTF-8 path.
 int adb_utime(const char* path, struct utimbuf* u) {
     std::wstring path_wide;
     if (!android::base::UTF8ToWide(path, &path_wide)) {
         return -1;
     }
-
+#ifdef _WIN32
+    FILETIME actime;
+    TimetToFileTime(u->actime, &actime);
+    FILETIME modtime;
+    TimetToFileTime(u->modtime, &modtime);
+    WIN32_FIND_DATA data;
+    HANDLE h = FindFirstFile(path_wide.c_str(), &data);
+    int result = SetFileTime(h, NULL, &actime, &modtime); 
+    FindClose(h);
+    return result;
+#else
     static_assert(sizeof(struct utimbuf) == sizeof(struct _utimbuf),
         "utimbuf and _utimbuf should be the same size because they both "
         "contain the same types, namely time_t");
     return _wutime(path_wide.c_str(), reinterpret_cast<struct _utimbuf*>(u));
+#endif
 }
 
 // Version of chmod() that takes a UTF-8 path.
@@ -2456,9 +2490,26 @@ static int _console_write_utf8(const char* const buf, const size_t buf_size, FIL
     return buf_size;
 }
 
+// https://stackoverflow.com/a/6849629/4063520
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+
 // Function prototype because attributes cannot be placed on func definitions.
-static int _console_vfprintf(const HANDLE console, FILE* stream, const char* format, va_list ap)
-        __attribute__((__format__(__printf__, 3, 0)));
+static int _console_vfprintf(const HANDLE console, FILE* stream,
+        FORMAT_STRING(const char* format), va_list ap)
+#ifndef _WIN32
+        __attribute__((__format__(__printf__, 3, 0)))
+#endif
+;
 
 // Internal function to format a UTF-8 string and write it to a Win32 console.
 // Returns -1 on error.
@@ -2746,13 +2797,13 @@ char* adb_getcwd(char* buf, int size) {
 }
 
 // The SetThreadDescription API was brought in version 1607 of Windows 10.
-typedef HRESULT(WINAPI* SetThreadDescription)(HANDLE hThread, PCWSTR lpThreadDescription);
+typedef HRESULT(WINAPI* SetThreadDescriptionFunc)(HANDLE hThread, PCWSTR lpThreadDescription);
 
 // Based on PlatformThread::SetName() from
 // https://cs.chromium.org/chromium/src/base/threading/platform_thread_win.cc
 int adb_thread_setname(const std::string& name) {
     // The SetThreadDescription API works even if no debugger is attached.
-    auto set_thread_description_func = reinterpret_cast<SetThreadDescription>(
+    auto set_thread_description_func = reinterpret_cast<SetThreadDescriptionFunc>(
             ::GetProcAddress(::GetModuleHandleW(L"Kernel32.dll"), "SetThreadDescription"));
     if (set_thread_description_func) {
         std::wstring name_wide;

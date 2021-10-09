@@ -32,19 +32,24 @@
 #define ID_QUIT MKID('Q', 'U', 'I', 'T')
 
 struct SyncRequest {
+#pragma pack(push, 1)
     uint32_t id;           // ID_STAT, et cetera.
     uint32_t path_length;  // <= 1024
     // Followed by 'path_length' bytes of path (not NUL-terminated).
-} __attribute__((packed));
+#pragma pack(pop)
+};
 
 union syncmsg {
-    struct __attribute__((packed)) {
+    struct {
+#pragma pack(push, 1)
         uint32_t id;
         uint32_t mode;
         uint32_t size;
         uint32_t time;
+#pragma pack(pop)
     } stat_v1;
-    struct __attribute__((packed)) {
+    struct {
+#pragma pack(push, 1)
         uint32_t id;
         uint32_t error;
         uint64_t dev;
@@ -57,21 +62,28 @@ union syncmsg {
         int64_t atime;
         int64_t mtime;
         int64_t ctime;
+#pragma pack(pop)
     } stat_v2;
-    struct __attribute__((packed)) {
+    struct {
+#pragma pack(push, 1)
         uint32_t id;
         uint32_t mode;
         uint32_t size;
         uint32_t time;
         uint32_t namelen;
+#pragma pack(pop)
     } dent;
-    struct __attribute__((packed)) {
+    struct {
+#pragma pack(push, 1)
         uint32_t id;
         uint32_t size;
+#pragma pack(pop)
     } data;
-    struct __attribute__((packed)) {
+    struct {
+#pragma pack(push, 1)
         uint32_t id;
         uint32_t msglen;
+#pragma pack(pop)
     } status;
 };
 

@@ -24,6 +24,8 @@
 
 #include "..\api\adb_interface.h"
 
+typedef void *WINUSB_INTERFACE_HANDLE;
+
 /** \brief Encapsulates an interface on our USB device that is accessible
   via WinUsb API.
 */

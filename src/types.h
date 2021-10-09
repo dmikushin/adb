@@ -110,7 +110,7 @@ struct Block {
         CHECK_EQ(0ULL, capacity_);
         CHECK_EQ(0ULL, size_);
         if (size != 0) {
-            data_ = std::make_unique<char[]>(size);
+            data_ = std::unique_ptr<char[]>(new std::remove_extent_t<char[]>[size]());
             capacity_ = size;
             size_ = size;
         }
@@ -223,7 +223,7 @@ struct IOVector {
         chain_.emplace_back(std::move(block));
     }
 
-    void append(block_type&& block) { append(std::make_unique<block_type>(std::move(block))); }
+    void append(block_type&& block) { append(std::unique_ptr<block_type>(new block_type(std::move(block)))); }
 
     void trim_front() {
         if (begin_offset_ == 0) {
@@ -231,7 +231,7 @@ struct IOVector {
         }
 
         const block_type* first_block = chain_.front().get();
-        auto copy = std::make_unique<block_type>(first_block->size() - begin_offset_);
+        auto copy = std::unique_ptr<block_type>(new block_type(first_block->size() - begin_offset_));
         memcpy(copy->data(), first_block->data() + begin_offset_, copy->size());
         chain_.front() = std::move(copy);
 

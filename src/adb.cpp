@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 #include <time.h>
 
 #include <chrono>
@@ -644,6 +646,10 @@ static unsigned __stdcall _redirect_stderr_thread(HANDLE h) {
 
 #endif
 
+#ifdef _WIN32
+typedef DWORD pid_t;
+#endif
+
 static void ReportServerStartupFailure(pid_t pid) {
     fprintf(stderr, "ADB server didn't ACK\n");
     fprintf(stderr, "Full server startup log: %s\n", GetLogFilePath().c_str());
@@ -663,6 +669,10 @@ static void ReportServerStartupFailure(pid_t pid) {
     while (i >= 0 && lines[i] != header) --i;
     while (static_cast<size_t>(i) < lines.size()) fprintf(stderr, "%s\n", lines[i++].c_str());
 }
+
+#if defined(_WIN32)
+#define snwprintf _snwprintf
+#endif
 
 int launch_server(const std::string& socket_spec) {
 #if defined(_WIN32)
@@ -765,7 +775,7 @@ int launch_server(const std::string& socket_spec) {
         return -1;
     }
 
-    WCHAR   args[64];
+    WCHAR args[64];
     snwprintf(args, arraysize(args), L"adb -L %s fork-server server --reply-fd %d",
               socket_spec.c_str(), ack_write_as_int);
 
@@ -1303,7 +1313,7 @@ void adb_notify_device_scan_complete() {
 
 void adb_wait_for_device_initialization() {
     std::unique_lock<std::mutex> lock(init_mutex);
-    init_cv.wait_for(lock, 3s, []() { return device_scan_complete && transports_ready; });
+    init_cv.wait_for(lock, 3 * std::chrono::seconds(1), []() { return device_scan_complete && transports_ready; });
 }
 
 #endif  // ADB_HOST

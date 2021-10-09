@@ -25,6 +25,12 @@
 #include "fastdeploycallbacks.h"
 #include "utils/String16.h"
 
+#ifdef _WIN32
+#include <stdio.h>
+#define popen _popen
+#define pclose _pclose
+#endif
+
 static constexpr long kRequiredAgentVersion = 0x00000001;
 
 static constexpr const char* kDeviceAgentPath = "/data/local/tmp/";

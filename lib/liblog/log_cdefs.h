@@ -46,7 +46,11 @@
 
 /* Unused argument. For C code only, remove symbol name for C++ */
 #ifndef __unused
+#if defined(_WIN32)
+#define __unused
+#else
 #define __unused        __attribute__((__unused__))
+#endif
 #endif
 
 #endif /* _LIBLOG_CDEFS_H__ */

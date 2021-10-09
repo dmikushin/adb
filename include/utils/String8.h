@@ -26,6 +26,19 @@
 #include <string.h> // for strcmp
 #include <stdarg.h>
 
+// https://stackoverflow.com/a/6849629/4063520
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+
 // ---------------------------------------------------------------------------
 
 namespace android {
@@ -61,7 +74,11 @@ public:
 
     static inline const String8 empty();
 
-    static String8              format(const char* fmt, ...) __attribute__((format (printf, 1, 2)));
+    static String8              format(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+        __attribute__((format (printf, 1, 2)))
+#endif
+    ;
     static String8              formatV(const char* fmt, va_list args);
 
     inline  const char*         string() const;
@@ -85,8 +102,11 @@ public:
             status_t            append(const char* other);
             status_t            append(const char* other, size_t numChars);
 
-            status_t            appendFormat(const char* fmt, ...)
-                    __attribute__((format (printf, 2, 3)));
+            status_t            appendFormat(FORMAT_STRING(const char* fmt), ...)
+#ifndef _WIN32
+		    __attribute__((format (printf, 2, 3)))
+#endif
+            ;
             status_t            appendFormatV(const char* fmt, va_list args);
 
             // Note that this function takes O(N) time to calculate the value.

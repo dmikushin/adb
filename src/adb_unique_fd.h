@@ -17,7 +17,9 @@
 #pragma once
 
 #include <errno.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include <android-base/unique_fd.h>
 

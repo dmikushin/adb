@@ -62,10 +62,9 @@ struct NonblockingFdConnection : public Connection {
     void Run(std::string* error) {
         SetRunning(true);
         while (IsRunning()) {
-            adb_pollfd pfds[2] = {
-                {.fd = fd_.get(), .events = POLLIN},
-                {.fd = wake_fd_read_.get(), .events = POLLIN},
-            };
+            adb_pollfd pfds[2];
+            pfds[0].fd = fd_.get(); pfds[0].events = POLLIN;
+            pfds[1].fd = wake_fd_read_.get(); pfds[1].events = POLLIN;
 
             {
                 std::lock_guard<std::mutex> lock(this->write_mutex_);
