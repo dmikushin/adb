@@ -775,16 +775,21 @@ int launch_server(const std::string& socket_spec) {
         return -1;
     }
 
-    WCHAR args[64];
-    snwprintf(args, arraysize(args), L"adb -L %s fork-server server --reply-fd %d",
-              socket_spec.c_str(), ack_write_as_int);
+    std::stringstream ss;
+    ss << "adb -L " << socket_spec << " fork-server server --reply-fd " << ack_write_as_int;
+    const std::string args = ss.str();
+
+    // https://stackoverflow.com/a/15228653/4063520
+    const std::wstring ws(args.begin(), args.end());
+    std::vector<wchar_t> wargs(ws.size() + 1);
+    std::copy(ws.begin(), ws.end(), wargs.begin());
 
     PROCESS_INFORMATION   pinfo;
     ZeroMemory(&pinfo, sizeof(pinfo));
 
     if (!CreateProcessW(
             program_path,                              /* program path  */
-            args,
+            wargs.data(),
                                     /* the fork-server argument will set the
                                        debug = 2 in the child           */
             NULL,                   /* process handle is not inheritable */
