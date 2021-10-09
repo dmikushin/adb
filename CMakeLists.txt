@@ -4,9 +4,8 @@ project(adb)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/openssl)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup")
-
 if (MSVC)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup")
 set(C11_INCLUDE_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/c11
 	${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/c11/c11)
