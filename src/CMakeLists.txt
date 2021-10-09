@@ -152,7 +152,7 @@ endif()
 set(LINK_LIBS libbase libbuildversion libcrypto_utils libcutils libdiagnose_usb liblog crypto)
 
 if (WIN32)
-    set(LINK_LIBS ${LINK_LIBS} ssl AdbWinApi AdbWinUsbApi ws2_32 gdi32 userenv -municode)
+    set(LINK_LIBS ${LINK_LIBS} ssl AdbWinApi AdbWinUsbApi ws2_32 gdi32 userenv)
 elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
     set(LINK_LIBS ${LINK_LIBS} pthread rt)
     set_target_properties(${PROJECT_NAME} PROPERTIES
